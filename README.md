@@ -82,6 +82,7 @@ You can visualize the graph as follows:
 
 References
 -------
+Above graph was inspired from this paper.
 
 * Yin, Heng, et al. "Panorama: capturing system-wide information flow for malware detection and analysis." Proceedings of the 14th ACM conference on Computer and communications security. ACM, 2007.
 
