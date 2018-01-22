@@ -4,9 +4,9 @@ Summary
 -------
 Spaniel is a plugin for [PANDA](https://github.com/panda-re/panda).
 
-By specifying the filenames that are compromised by an attacker, spaniel can trace every instruction which is (potentially) handled by a malware. These automated analyses are based on taint analysis
+By specifying the filenames that are compromised by an attacker, spaniel can trace every instruction which is (potentially) handled by a malware. These automated analyses are based on taint analysis.
 
-I used `taint2`, `osi_linux`, `osi` which are plugins for taint analysis and introspection functions that are default-installed in PANDA.
+I used `taint2`, `osi_linux`, `osi` that are plugins for taint analysis and introspection functions that are default-installed in PANDA.
 
 
 Arguments
