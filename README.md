@@ -4,39 +4,38 @@ Summary
 -------
 Spaniel is a plugin for [PANDA](https://github.com/panda-re/panda).
 
-By specifying filename which are touched by attacker, spaiel can trace every instructions which handled or potentially handled by malware. These automated analysis are based on taint analysis.
+By specifying the filenames that are compromised by an attacker, spaniel can trace every instruction which is (potentially) handled by a malware. These automated analyses are based on taint analysis
 
-I used `taint2`, `osi_linux`, `osi` which are plugins default-installed in PANDA for utilizing taint analysis and introspection functions.
+I used `taint2`, `osi_linux`, `osi` which are plugins for taint analysis and introspection functions that are default-installed in PANDA.
+
 
 Arguments
 ---------
-These argument names are inspired from `file_taint` a default-installed plugins of [PANDA](https://github.com/panda-re/panda)
+The arguments names are derived from `file_taint` a default-installed plugin of [PANDA](https://github.com/panda-re/panda).
 
-* `filename`: string, filename we want to monitor and analysis read data using taint analysis.
-* `file_taint`: boolean, Enable tainting data opend from file specified in "filename"
+* `filename`: string, filename we want to monitor and analyze by using taint analysis.
+* `file_taint`: boolean, Enable taint analysis on data.
+
 
 Dependencies
 ------------
-I modified some codes in [PANDA](https://github.com/panda-re/panda) for inserting some rr callbacking functions to handle packet received and/or send in e1000 network driver.
-
+I modified the source code of [PANDA](https://github.com/panda-re/panda) by inserting rr callback functions to handle received and/or sent packets in e1000 network driver.
 
 Use case
 -------
 
-We Analyzed file exfiltration, left one is attacker(Kali linux) , right one is victim(Debian on Qemu).
+Data exfiltration analysis: on the left we have the attacker (Kali Linux), on the right, the victim (Debian on QEMU).
 
 ![Record file exfiltration by attacker](docs/images/exfiltration_cat.png)
 
 
 We want to analyze malcious processing applied to 'passwd'
 
-
 	$PANDA_PATH/i386-softmmu/qemu-system-i386 -m 128 -replay meterbind_cat_1211_4  -os linux-32 -panda osi\
     -panda osi_linux:kconf_group=debian-3.2.81-686-pae:32  -panda syscalls2:profile=linux_x86 \
     -panda spaniel:filename=passwd,file_taint,last_tainted_rr=3194324
 
-
-And you will see this dot script in this plugin's(spaniel's) output.
+And you will see this dot script in spaniel's output:
 
     digraph taintgraph {
         "/etc/passwd"[shape=note];
@@ -70,23 +69,19 @@ And you will see this dot script in this plugin's(spaniel's) output.
         "sys_write" -> "[fd]1";
     }
 
-
-
-Please named this dot script arbitrary name and type this command to convert to graph image.
-I named this file "exfiltration.dot".
+You can give the dot script an arbitrary name, I named it "exfiltration.dot." The corresponding graph can be generated with the following command:
 
 	> dot -T pdf exfiltration.dot -o exfiltration.pdf
 
-You can see graph
+You can visualize the graph as follows:
 
 	> open exfiltration.pdf
 
 ![Graph Visualization](docs/images/taint_graph.png)
 
 
-Thanks
+References
 -------
-Above graph was inspired from this paper. Thanks.
 
 * Yin, Heng, et al. "Panorama: capturing system-wide information flow for malware detection and analysis." Proceedings of the 14th ACM conference on Computer and communications security. ACM, 2007.
 
