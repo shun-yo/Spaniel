@@ -2,7 +2,7 @@
 
 Summary
 -------
-Spaniel is a plugin for panda-re(https://github.com/panda-re/panda).
+Spaniel is a plugin for [PANDA](https://github.com/panda-re/panda).
 
 By specifying filename which are touched by attacker, spaiel can trace every instructions which handled or potentially handled by malware. These automated analysis are based on taint analysis.
 
@@ -10,14 +10,14 @@ I used `taint2`, `osi_linux`, `osi` which are plugins default-installed in PANDA
 
 Arguments
 ---------
-These argument names are inspired from `file_taint` a default-installed plugins of panda-re(https://github.com/panda-re/panda)
+These argument names are inspired from `file_taint` a default-installed plugins of [PANDA](https://github.com/panda-re/panda)
 
 * `filename`: string, filename we want to monitor and analysis read data using taint analysis.
 * `file_taint`: boolean, Enable tainting data opend from file specified in "filename"
 
 Dependencies
 ------------
-I modified some codes in panda-re(https://github.com/panda-re/panda) for inserting some rr callbacking functions to handle packet received and/or send in e1000 network driver.
+I modified some codes in [PANDA](https://github.com/panda-re/panda) for inserting some rr callbacking functions to handle packet received and/or send in e1000 network driver.
 
 
 Use case
