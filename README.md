@@ -29,7 +29,7 @@ Data exfiltration analysis: on the left we have the attacker (Kali Linux), on th
 ![Record file exfiltration by attacker](docs/images/exfiltration_cat.png)
 
 
-We want to analyze malcious processing applied to 'passwd'
+I want to analyze malcious processing applied to 'passwd'
 
 	$PANDA_PATH/i386-softmmu/qemu-system-i386 -m 128 -replay meterbind_cat_1211_4  -os linux-32 -panda osi\
     -panda osi_linux:kconf_group=debian-3.2.81-686-pae:32  -panda syscalls2:profile=linux_x86 \
