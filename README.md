@@ -19,7 +19,7 @@ The arguments names are derived from `file_taint` a default-installed plugin of 
 
 Dependencies
 ------------
-I modified the source code of [PANDA](https://github.com/panda-re/panda) by inserting rr callback functions to handle received and/or sent packets in e1000 network driver.
+I modified the source code of [PANDA](https://github.com/panda-re/panda) by inserting rr callback functions to handle received and/or sent packets in e1000 network device.
 
 Use case
 -------
