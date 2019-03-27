@@ -1,3 +1,7 @@
+/*
+ * This work is licensed under the terms of the GNU GPL, version 2. 
+ * See the COPYING file in the top-level directory.  */
+
 // This needs to be defined before anything is included in order to get
 // the PRIx64 macro
 #define __STDC_FORMAT_MACROS
