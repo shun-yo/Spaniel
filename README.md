@@ -9,17 +9,52 @@ By specifying the filenames that are compromised by an attacker, spaniel can tra
 I used `taint2`, `osi_linux`, `osi` that are plugins for taint analysis and introspection functions that are default-installed in PANDA.
 
 
+Set up
+-------
+
+First, build PANDA I used.
+I added little modification to the original code of PANDA. I inserted rr callback functions that handle received and/or sent packets in e1000 virtual network device.
+
+
+Please apply the patch `panda-patch.patch` as follows.
+After applied the patch, [build PANDA](https://github.com/panda-re/panda). 
+(The platform I used is ubuntu14.04.)
+
+    % git clone https://github.com/panda-re/panda.git
+    % cd panda
+    % git checkout -b 4e639ff4d867db6c485647773732bd38a316b9d6
+    % patch -p1 < ../panda-patch.patch
+    % cd ..
+    % mkdir build-panda
+    % cd build-panda/
+    % ../panda/build.sh
+
+
+Next, put the folder `spaniel` into the directory `panda/plugins`. And then, edit the `config.llvm.panda` to append the name of a plugin to build, namely spaniel.
+
+    % cd ../panda/panda/plugins/
+    % mv spaniel panda/plugins
+    % cd panda/plugins/
+    % echo "spaniel" >> config.llvm.panda
+    
+Finally, build Spaniel.
+    
+    % cd ../../../build-panda/
+    % make -j 2
+
+
+
 Arguments
 ---------
 The arguments names are derived from `file_taint` a default-installed plugin of [PANDA](https://github.com/panda-re/panda).
 
 * `filename`: string, filename we want to monitor and analyze by using taint analysis.
 * `file_taint`: boolean, Enable taint analysis on data.
-
+* `last_tainted_rr`: uint64, The timing (the count of rr instruction) at which taint tracking will stop.
 
 Dependencies
 ------------
-I modified the source code of [PANDA](https://github.com/panda-re/panda) by inserting rr callback functions to handle received and/or sent packets in e1000 virtual network device.
+I modified the source code of [PANDA](https://github.com/panda-re/panda) by inserting rr callback functions that handle received and/or sent packets in e1000 virtual network device.
 
 Use case
 -------
@@ -29,7 +64,7 @@ Data exfiltration analysis: on the left we have the attacker (Kali Linux), on th
 ![Record file exfiltration by attacker](docs/images/exfiltration_cat.png)
 
 
-I want to analyze malcious processing applied to 'passwd'
+I want to analyze malcious processing applied to 'passwd'.
 
 	$PANDA_PATH/i386-softmmu/qemu-system-i386 -m 128 -replay meterbind_cat_1211_4  -os linux-32 -panda osi\
     -panda osi_linux:kconf_group=debian-3.2.81-686-pae:32  -panda syscalls2:profile=linux_x86 \
@@ -78,6 +113,14 @@ You can visualize the graph as follows:
 	> open exfiltration.pdf
 
 ![Graph Visualization](docs/images/taint_graph.png)
+
+
+
+Publications
+-------
+
+* Shun Yonamine, Youki Kadobayashi, Daisuke Miyamoto, Yuzo Taenaka, "Towards Automated Characterization of Malware's High-level Mechanism Using Virtual Machine Introspection." 5th International Conference on Information Systems Security and Privacy (ICISSP 2019), Plague, Czech, Feb 2019. [pdf](http://www.insticc.org/Primoris/Resources/PaperPdf.ashx?idPaper=74055)
+
 
 
 References

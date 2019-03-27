@@ -1,0 +1,294 @@
+diff -rupN panda/hw/net/e1000.c panda_patched/hw/net/e1000.c
+--- panda/hw/net/e1000.c	2019-03-25 21:07:30.375966172 +0900
++++ panda_patched/hw/net/e1000.c	2019-03-25 21:08:58.659989105 +0900
+@@ -38,6 +38,9 @@
+ 
+ #include "e1000x_common.h"
+ 
++#include "panda/rr/rr_log_all.h"
++
++
+ static const uint8_t bcast[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+ 
+ #define E1000_DEBUG
+@@ -520,6 +523,21 @@ inc_tx_bcast_or_mcast_count(E1000State *
+ static void
+ e1000_send_packet(E1000State *s, const uint8_t *buf, int size)
+ {
++    //printf("e1000_send_pack %d\n", RR_CALL_HANDLE_PACKET);
++    if (rr_in_record()){
++        //rr_record_handle_packet_call(RR_CALLSITE_E1000_XMIT_SEG_1, tp->vlan,
++        //    tp->size + 4, PANDA_NET_TX);
++    //printf("in_record now...\n");
++
++    //printf("args  %d\n",  (int)size);
++
++        rr_record_handle_packet_call(RR_CALLSITE_NIC_SEND_PACKET, (uint8_t *)buf, size, PANDA_NET_TX);
++//        rr_record_handle_packet_call(RR_CALLSITE_NIC_RECEIVE_PACKET, (uint8_t *)(iov->iov_base+iov_ofs), iov_copy, PANDA_NET_RX, (uint64_t)(iov->iov_base+iov_ofs));
++
++    }
++
++
++
+     static const int PTCregs[6] = { PTC64, PTC127, PTC255, PTC511,
+                                     PTC1023, PTC1522 };
+ 
+@@ -577,10 +595,12 @@ xmit_seg(E1000State *s)
+     }
+ 
+     if (tp->props.sum_needed & E1000_TXD_POPTS_TXSM) {
++//        printf("tcp_checksum\n");
+         putsum(tp->data, tp->size, tp->props.tucso,
+                tp->props.tucss, tp->props.tucse);
+     }
+     if (tp->props.sum_needed & E1000_TXD_POPTS_IXSM) {
++//        printf("ip_checksum\n");
+         putsum(tp->data, tp->size, tp->props.ipcso,
+                tp->props.ipcss, tp->props.ipcse);
+     }
+@@ -588,8 +608,10 @@ xmit_seg(E1000State *s)
+         memmove(tp->vlan, tp->data, 4);
+         memmove(tp->data, tp->data + 4, 8);
+         memcpy(tp->data + 8, tp->vlan_header, 4);
++//        printf("sendpacket_tp_vlan\n");
+         e1000_send_packet(s, tp->vlan, tp->size + 4);
+     } else {
++//        printf("sendpacket_tp_data\n");
+         e1000_send_packet(s, tp->data, tp->size);
+     }
+ 
+@@ -932,6 +954,14 @@ e1000_receive_iov(NetClientState *nc, co
+                 do {
+                     iov_copy = MIN(copy_size, iov->iov_len - iov_ofs);
+                     pci_dma_write(d, ba, iov->iov_base + iov_ofs, iov_copy);
++
++////////////////
++    if (rr_in_record()){
++        rr_record_handle_packet_call(RR_CALLSITE_NIC_RECEIVE_PACKET, (uint8_t *)(iov->iov_base+iov_ofs), iov_copy, PANDA_NET_RX);
++    }
++////////////////
++
++
+                     copy_size -= iov_copy;
+                     ba += iov_copy;
+                     iov_ofs += iov_copy;
+diff -rupN panda/panda/include/panda/rr/rr_log_all.h panda_patched/panda/include/panda/rr/rr_log_all.h
+--- panda/panda/include/panda/rr/rr_log_all.h	2019-03-25 21:07:30.419966180 +0900
++++ panda_patched/panda/include/panda/rr/rr_log_all.h	2019-03-25 21:09:53.048003547 +0900
+@@ -37,6 +37,11 @@
+ #include "qemu/log.h"
+ #include "qom/cpu.h"
+ 
++
++
++#define PANDA_NET_RX 0
++#define PANDA_NET_TX 1
++
+ // Used later for enum to string macros
+ #define GENERATE_ENUM(ENUM) ENUM
+ #define GENERATE_STRING(STRING) #STRING
+@@ -188,7 +193,11 @@ static inline const char* get_log_entry_
+     ACTION(RR_CALLSITE_WRITE_4), \
+     ACTION(RR_CALLSITE_WRITE_2), \
+     ACTION(RR_CALLSITE_WRITE_1), \
+-    ACTION(RR_CALLSITE_LAST),
++    ACTION(RR_CALLSITE_LAST), \
++    ACTION(RR_CALLSITE_NIC_SEND_PACKET), \
++    ACTION(RR_CALLSITE_NIC_RECEIVE_PACKET),\
++    ACTION(RR_CALLSITE_NIC_NET_TRANSFER_TX), \
++    ACTION(RR_CALLSITE_NIC_NET_TRANSFER_RX),
+ 
+ typedef enum {
+     FOREACH_CALLSITE(GENERATE_ENUM)
+@@ -543,10 +552,13 @@ typedef struct {
+     uint8_t* buf;
+     uint32_t size;
+     uint8_t direction;
++//    uint64_t old_buf_addr;
+ } RR_handle_packet_args;
+ 
+ void rr_record_handle_packet_call(RR_callsite_id call_site, uint8_t* buf,
+                                   int size, uint8_t direction);
++//void rr_record_handle_packet_call(RR_callsite_id call_site, uint8_t* buf,
++//                                  int size, uint8_t direction, uint64_t old_buf_addr);
+ 
+ void rr_record_net_transfer(RR_callsite_id call_site,
+                             Net_transfer_type transfer_type, uint64_t src_addr,
+diff -rupN panda/panda/src/rr/rr_log.c panda_patched/panda/src/rr/rr_log.c
+--- panda/panda/src/rr/rr_log.c	2019-03-25 21:07:30.435966184 +0900
++++ panda_patched/panda/src/rr/rr_log.c	2019-03-25 21:09:28.983995284 +0900
+@@ -50,6 +50,9 @@
+ #include "migration/qemu-file.h"
+ #include "io/channel-file.h"
+ #include "sysemu/sysemu.h"
++
++#include "panda/plugin.h"
++
+ /******************************************************************************************/
+ /* GLOBALS */
+ /******************************************************************************************/
+@@ -305,26 +308,32 @@ static inline void rr_write_item(void)
+             RR_skipped_call_args* args = &item.variant.call_args;
+             // mz write kind first!
+             RR_WRITE_ITEM(args->kind);
++//printf("debug args->kind %d\n", args->kind);
+             switch (args->kind) {
+                 case RR_CALL_CPU_MEM_RW:
++//printf("rr_write_item cpu_mem_rw\n");
+                     RR_WRITE_ITEM(args->variant.cpu_mem_rw_args);
+                     rr_fwrite(args->variant.cpu_mem_rw_args.buf, 1,
+                             args->variant.cpu_mem_rw_args.len);
+                     break;
+                 case RR_CALL_CPU_MEM_UNMAP:
++//printf("rr_write_item cpu_mem_unmap\n");
+                     RR_WRITE_ITEM(args->variant.cpu_mem_unmap);
+                     rr_fwrite(args->variant.cpu_mem_unmap.buf, 1,
+                                 args->variant.cpu_mem_unmap.len);
+                     break;
+                 case RR_CALL_MEM_REGION_CHANGE:
++//printf("rr_write_item mem_region_change\n");
+                     RR_WRITE_ITEM(args->variant.mem_region_change_args);
+                     rr_fwrite(args->variant.mem_region_change_args.name, 1,
+                             args->variant.mem_region_change_args.len);
+                     break;
+                 case RR_CALL_HD_TRANSFER:
++//printf("rr_write_item hd_transfer\n");
+                     RR_WRITE_ITEM(args->variant.hd_transfer_args);
+                     break;
+                 case RR_CALL_NET_TRANSFER:
++//printf("rr_write_item net_transfer\n");
+                     RR_WRITE_ITEM(args->variant.net_transfer_args);
+                     break;
+                 case RR_CALL_HANDLE_PACKET:
+@@ -333,14 +342,17 @@ static inline void rr_write_item(void)
+                             args->variant.handle_packet_args.size, 1);
+                     break;
+                 default:
++//printf("rr_write_item Unimmplemented skippedcall\n");
+                     // mz unimplemented
+                     rr_assert(0 && "Unimplemented skipped call!");
+             }
+         } break;
+         case RR_LAST:
++//printf("rr_write_item rr_last\n");
+             // mz nothing to read
+             break;
+         default:
++//printf("rr_write_item unimplemented_replay_log_entry\n");
+             // mz unimplemented
+             rr_assert(0 && "Unimplemented replay log entry!");
+     }
+@@ -589,6 +601,7 @@ void rr_record_net_transfer(RR_callsite_
+ void rr_record_handle_packet_call(RR_callsite_id call_site, uint8_t* buf,
+                                   int size, uint8_t direction)
+ {
++//    printf("in rr_handle_packet_call enter\n");
+     RR_log_entry* item = &(rr_nondet_log->current_item);
+     // mz just in case
+     memset(item, 0, sizeof(RR_log_entry));
+@@ -602,7 +615,10 @@ void rr_record_handle_packet_call(RR_cal
+     item->variant.call_args.variant.handle_packet_args.buf = buf;
+     item->variant.call_args.variant.handle_packet_args.size = size;
+     item->variant.call_args.variant.handle_packet_args.direction = direction;
++    //item->variant.call_args.variant.handle_packet_args.old_buf_addr = (uint64_t)buf;
++    //item->variant.call_args.variant.handle_packet_args.old_buf_addr = old_buf_addr;
+ 
++//    printf("in rr_handle_packet_call return\n");
+     rr_write_item();
+ }
+ 
+@@ -725,27 +741,35 @@ static RR_log_entry *rr_read_item(void)
+     RR_READ_ITEM(item->header.kind);
+     RR_READ_ITEM(item->header.callsite_loc);
+ 
++    
+     // mz read the rest of the item
+     switch (item->header.kind) {
+         case RR_INPUT_1:
++//    printf("rr_input1 %d\n", (int)item->header.kind);
+             RR_READ_ITEM(item->variant.input_1);
+             break;
+         case RR_INPUT_2:
++//    printf("rr_input2 %d\n", (int)item->header.kind);
+             RR_READ_ITEM(item->variant.input_2);
+             break;
+         case RR_INPUT_4:
++//    printf("rr_input4 %d\n", (int)item->header.kind);
+             RR_READ_ITEM(item->variant.input_4);
+             break;
+         case RR_INPUT_8:
++//    printf("rr_input8 %d\n", (int)item->header.kind);
+             RR_READ_ITEM(item->variant.input_8);
+             break;
+         case RR_INTERRUPT_REQUEST:
++//    printf("rr_interrupt %d\n", (int)item->header.kind);
+             RR_READ_ITEM(item->variant.interrupt_request);
+             break;
+         case RR_EXIT_REQUEST:
++//    printf("rr_exit %d\n", (int)item->header.kind);
+             RR_READ_ITEM(item->variant.exit_request);
+             break;
+         case RR_SKIPPED_CALL: {
++//printf("rr_skipped %d\n", (int)item->header.kind);
+             RR_skipped_call_args* args = &item->variant.call_args;
+             // mz read kind first!
+             RR_READ_ITEM(args->kind);
+@@ -782,9 +806,11 @@ static RR_log_entry *rr_read_item(void)
+                     break;
+ 
+                 case RR_CALL_HANDLE_PACKET:
++//printf("rr_handle %d\n", (int)item->header.kind);
+                     RR_READ_ITEM(args->variant.handle_packet_args);
+                     // mz XXX HACK
+                     args->old_buf_addr = (uint64_t)args->variant.handle_packet_args.buf;
++                    //args->old_buf_addr = (uint64_t)args->variant.handle_packet_args.old_buf_addr;
+                     // mz buffer length in args->variant.cpu_mem_rw_args.len
+                     // mz always allocate a new one. we free it when the item is added
+                     // to the recycle list
+@@ -1052,6 +1078,37 @@ void rr_replay_skipped_calls_internal(RR
+                                           /*is_write=*/1,
+                                           args.variant.cpu_mem_unmap.len);
+             } break;
++            case RR_CALL_HANDLE_PACKET: {
++                        // run all callbacks registered for packet handling
++                        RR_handle_packet_args hp = args.variant.handle_packet_args;
++                        panda_cb_list *plist;
++                        for (plist = panda_cbs[PANDA_CB_REPLAY_HANDLE_PACKET]; plist != NULL; plist = panda_cb_list_next(plist)) {
++                            plist->entry.replay_handle_packet
++                                (first_cpu,
++                                 hp.buf,
++                                 hp.size,
++                                 hp.direction,
++                                 args.old_buf_addr);
++                        }
++            } break;
++
++            case RR_CALL_NET_TRANSFER: {
++                // run all callbacks registered for transfers within network
++                // card (E1000)
++                RR_net_transfer_args nta =
++                    args.variant.net_transfer_args;
++                panda_cb_list *plist;
++                for (plist = panda_cbs[PANDA_CB_REPLAY_NET_TRANSFER];
++                        plist != NULL; plist = panda_cb_list_next(plist)) {
++                    plist->entry.replay_net_transfer
++                        (first_cpu,
++                         nta.type,
++                         nta.src_addr,
++                         nta.dest_addr,
++                         nta.num_bytes);
++                }
++            } break;
++
+             default:
+                 // mz sanity check
+                 rr_assert(0);
+@@ -1389,7 +1446,7 @@ void rr_do_end_record(void)
+ #endif
+ }
+ 
+-extern void panda_cleanup(void);
++//extern void panda_cleanup(void);
+ 
+ // file_name_full should be full path to the record/replay log
+ int rr_do_begin_replay(const char* file_name_full, CPUState* cpu_state)
