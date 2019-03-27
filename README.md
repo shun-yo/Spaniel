@@ -115,10 +115,6 @@ You can visualize the graph as follows:
 ![Graph Visualization](docs/images/taint_graph.png)
 
 
-License
--------
-GPLv2.
-
 
 Publications
 -------
