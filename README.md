@@ -59,7 +59,7 @@ I modified the source code of [PANDA](https://github.com/panda-re/panda) by inse
 Use case
 -------
 
-This use case can be seen in the demo video as shown in this [link](https://youtu.be/HibJrxdUUvg).
+This demo can be seen in this [video link](https://youtu.be/HibJrxdUUvg).
 
 Data exfiltration analysis: on the left we have the attacker (Kali Linux), on the right, the victim (Debian on QEMU).
 
